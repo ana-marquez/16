@@ -184,8 +184,16 @@ class sale_order(models.Model):
                                 break
                     else:
                         order.append(line.order_id.id)
-                    
-                to_invoice_amount += taxes['total_included']
+                order_date = line.order_id.date_order.date()
+                currency_rate = line.order_id.currency_id.with_context(date=order_date).rate
+                if currency_rate != 1.0:
+                    if currency_rate < 1.0:
+                        to_invoice_amount += taxes['total_included'] / currency_rate
+                    else:
+                        to_invoice_amount += taxes['total_included'] * currency_rate
+                else:
+                    to_invoice_amount += taxes['total_included']
+                # to_invoice_amount += taxes['total_included']
             
             domain = [
                 ('move_id.partner_id', 'in', partner_ids),
@@ -198,7 +206,17 @@ class sale_order(models.Model):
                     price, line.move_id.currency_id,
                     line.quantity,
                     product=line.product_id, partner=line.move_id.partner_id)
-                to_invoice_amount += taxes['total_included']
+
+                invoice_date = line.move_id.invoice_date.date() if line.move_id.invoice_date else fields.Date.context_today(self)
+                currency_rate = line.move_id.currency_id.with_context(date=invoice_date).rate
+                if currency_rate != 1.0:
+                    if currency_rate < 1.0:
+                        to_invoice_amount += taxes['total_included'] / currency_rate
+                    else:
+                        to_invoice_amount += taxes['total_included'] * currency_rate
+                else:
+                    to_invoice_amount += taxes['total_included']
+                # to_invoice_amount += taxes['total_included']
 
             # We sum from all the invoices lines that are in draft and not linked
             # to a sale order
@@ -215,7 +233,18 @@ class sale_order(models.Model):
                     price, line.move_id.currency_id,
                     line.quantity,
                     product=line.product_id, partner=line.move_id.partner_id)
-                draft_invoice_lines_amount += taxes['total_included']
+
+                invoice_date = line.move_id.invoice_date.date() if line.move_id.invoice_date else fields.Date.context_today(self)
+                currency_rate = line.move_id.currency_id.with_context(date=invoice_date).rate
+                if currency_rate != 1.0:
+                    if currency_rate < 1.0:
+                        draft_invoice_lines_amount += taxes['total_included'] / currency_rate
+                    else:
+                        draft_invoice_lines_amount += taxes['total_included'] * currency_rate
+                else:
+                    draft_invoice_lines_amount += taxes['total_included']
+
+                # draft_invoice_lines_amount += taxes['total_included']
                 if line.move_id.id not in invoice:
                     invoice.append(line.move_id.id)
 
